@@ -1,8 +1,9 @@
 const Express = require("express");
 const RouterLibros = Express.Router();
 const Libro = require("../Models/libro");
+const { requiredScopes } = require("express-oauth2-jwt-bearer");
 
-RouterLibros.get("/", async (req, res, next) => {
+RouterLibros.get("/", requiredScopes('read:productos'), async (req, res, next) => {
   try {
     let libros = await Libro.find({activo: true});
     if (libros.length < 1) {
@@ -16,19 +17,19 @@ RouterLibros.get("/", async (req, res, next) => {
   }
 });
 
-RouterLibros.get("/:id", async (req, res, next) => {
+RouterLibros.get("/:id", requiredScopes('read:productos'),async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
     validarId(id);
     let libro = await Libro.find({ codigo: id });
-    validarLibro(libro);
+    validarLibro(libro, id);
     res.status(200).json(libro);
   } catch (err) {
     next(err);
   }
 });
 
-RouterLibros.post("/", async (req, res, next) => {
+RouterLibros.post("/", requiredScopes('write:productos'), async (req, res, next) => {
   try {
     const { titulo, autor } = req.body;
     validarDatos(titulo, autor);
@@ -48,7 +49,7 @@ RouterLibros.post("/", async (req, res, next) => {
   }
 });
 
-RouterLibros.put("/:id", async (req, res, next) => {
+RouterLibros.put("/:id", requiredScopes('write:productos'), async (req, res, next) => {
   try {
     const { titulo, autor } = req.body;
     const id = parseInt(req.params.id);
@@ -59,14 +60,14 @@ RouterLibros.put("/:id", async (req, res, next) => {
       { titulo, autor },
       { new: true }
     );
-    validarLibro(libro);
+    validarLibro(libro, id);
     res.status(200).json(libro);
   } catch (err) {
     next(err);
   }
 });
 
-RouterLibros.delete("/:id", async (req, res, next) => {
+RouterLibros.delete("/:id", requiredScopes('write:productos'), async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);    
     validarId(id);
@@ -75,7 +76,7 @@ RouterLibros.delete("/:id", async (req, res, next) => {
       { activo: false },
       { new: true }
     );
-    validarLibro(libro);
+    validarLibro(libro, id);
     res.status(200).json(libro);
   } catch (err) {
     next(err);
@@ -107,7 +108,7 @@ let validarDatos = (titulo, autor) => {
   }
 };
 
-let validarLibro = (libro) =>{
+let validarLibro = (libro, id) =>{
     if (!libro) {
         let error = new Error(`No existe ningun libro asociado al id nro ${id}`);
         error.status = 404;
